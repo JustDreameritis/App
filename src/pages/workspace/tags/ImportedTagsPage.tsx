@@ -5,6 +5,7 @@ import ImportSpreadsheetColumns from '@components/ImportSpreadsheetColumns';
 import ImportSpreadsheetConfirmModal from '@components/ImportSpreadsheetConfirmModal';
 import ScreenWrapper from '@components/ScreenWrapper';
 import useCloseImportPage from '@hooks/useCloseImportPage';
+import useConfirmModal from '@hooks/useConfirmModal';
 import useLocalize from '@hooks/useLocalize';
 import useOnyx from '@hooks/useOnyx';
 import usePolicy from '@hooks/usePolicy';
@@ -41,6 +42,7 @@ function ImportedTagsPage({route}: ImportedTagsPageProps) {
     const isQuickSettingsFlow = route.name === SCREENS.SETTINGS_TAGS.SETTINGS_TAGS_IMPORTED;
 
     const {setIsClosing} = useCloseImportPage();
+    const {showConfirmModal} = useConfirmModal();
 
     const getColumnRoles = (): ColumnRole[] => {
         const roles = [];
@@ -112,10 +114,19 @@ function ImportedTagsPage({route}: ImportedTagsPageProps) {
         });
 
         if (tags) {
+            if (policyTagLists.at(0)?.required && tags.every((tag) => !tag.enabled)) {
+                showConfirmModal({
+                    title: translate('workspace.tags.cannotDeleteOrDisableAllTags.title'),
+                    prompt: translate('workspace.tags.cannotDeleteOrDisableAllTags.description'),
+                    confirmText: translate('common.buttonConfirm'),
+                    shouldShowCancelButton: false,
+                });
+                return;
+            }
             setIsImportingTags(true);
             importPolicyTags(policyID, tags);
         }
-    }, [validate, spreadsheet, containsHeader, policyTagLists, policyID]);
+    }, [validate, spreadsheet, containsHeader, policyTagLists, policyID, showConfirmModal, translate]);
 
     if (!spreadsheet && isLoadingOnyxValue(spreadsheetMetadata)) {
         return;

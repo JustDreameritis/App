@@ -19,7 +19,10 @@ const expensesSearch = suggestedSearches[CONST.SEARCH.SEARCH_KEYS.EXPENSES];
 const chatsSearch = suggestedSearches[CONST.SEARCH.SEARCH_KEYS.CHATS];
 const submitSearch = suggestedSearches[CONST.SEARCH.SEARCH_KEYS.SUBMIT];
 
-function getActiveKey(similarSearchHash: number, hasPaidGroupPolicy: boolean): string {
+function getActiveKey(similarSearchHash: number, hasPaidGroupPolicy: boolean, isSavedSearchActive: boolean): string {
+    if (isSavedSearchActive) {
+        return '';
+    }
     const candidates = [reportsSearch, expensesSearch, chatsSearch, ...(hasPaidGroupPolicy ? [submitSearch] : [])];
     return candidates.find((entry) => similarSearchHash === entry.similarSearchHash)?.key ?? reportsSearch.key;
 }
@@ -28,6 +31,7 @@ function StaticTabSelector({queryJSON}: {queryJSON: SearchQueryJSON}) {
     const {translate} = useLocalize();
     const expensifyIcons = useMemoizedLazyExpensifyIcons(['Receipt', 'Document', 'ChatBubbles', 'Send'] as const);
     const [policyInfo] = useOnyx(ONYXKEYS.COLLECTION.POLICY, {selector: staticPolicyInfoSelector});
+    const [savedSearches] = useOnyx(ONYXKEYS.SAVED_SEARCHES);
     const hasPaidGroupPolicy = policyInfo?.hasPaidGroupPolicy ?? false;
 
     const tabs: TabSelectorBaseItem[] = useMemo(() => {
@@ -44,7 +48,11 @@ function StaticTabSelector({queryJSON}: {queryJSON: SearchQueryJSON}) {
         return result;
     }, [expensifyIcons, translate, hasPaidGroupPolicy]);
 
-    const activeKey = useMemo(() => getActiveKey(queryJSON.similarSearchHash, hasPaidGroupPolicy), [queryJSON.similarSearchHash, hasPaidGroupPolicy]);
+    const isSavedSearchActive = !!savedSearches && Object.keys(savedSearches).some((key) => Number(key) === queryJSON.hash);
+    const activeKey = useMemo(
+        () => getActiveKey(queryJSON.similarSearchHash, hasPaidGroupPolicy, isSavedSearchActive),
+        [queryJSON.similarSearchHash, hasPaidGroupPolicy, isSavedSearchActive],
+    );
 
     return (
         <SearchPageTabSelectorContent

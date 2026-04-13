@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {View} from 'react-native';
 import FormHelpMessage from '@components/FormHelpMessage';
 import HeaderWithBackButton from '@components/HeaderWithBackButton';
@@ -32,15 +32,15 @@ function SelectCountryStep({disableAutoFocus}: {disableAutoFocus?: boolean}) {
     const currency = currentUserPersonalDetails?.localCurrencyCode ?? CONST.CURRENCY.USD;
     const [searchValue, debouncedSearchValue, setSearchValue] = useDebouncedState('');
 
-    const getCountry = () => {
+    const getCountry = useCallback(() => {
         if (addNewPersonalCard?.data?.selectedCountry) {
             return addNewPersonalCard.data.selectedCountry;
         }
 
         return getPlaidCountry(currency, currencyList, countryByIp);
-    };
+    }, [addNewPersonalCard?.data?.selectedCountry, currency, currencyList, countryByIp]);
 
-    const [currentCountry, setCurrentCountry] = useState<string | undefined>(getCountry);
+    const [currentCountry, setCurrentCountry] = useState<string | undefined>(() => getCountry());
     const [hasError, setHasError] = useState(false);
     const isUS = currentCountry === CONST.COUNTRY.US;
 

@@ -184,7 +184,7 @@ function SearchPageTabSelector({queryJSON, onTabPress}: SearchPageTabSelectorPro
                     badgeText,
                 });
                 queryMap.set(item.key, {query: item.searchQuery});
-                if (queryJSON && item.similarSearchHash === queryJSON.similarSearchHash) {
+                if (!activeKey && queryJSON && item.similarSearchHash === queryJSON.similarSearchHash) {
                     activeKey = item.key;
                 }
             }

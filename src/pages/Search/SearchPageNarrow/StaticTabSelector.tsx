@@ -28,6 +28,7 @@ function StaticTabSelector({queryJSON}: {queryJSON: SearchQueryJSON}) {
     const {translate} = useLocalize();
     const expensifyIcons = useMemoizedLazyExpensifyIcons(['Receipt', 'Document', 'ChatBubbles', 'Send'] as const);
     const [policyInfo] = useOnyx(ONYXKEYS.COLLECTION.POLICY, {selector: staticPolicyInfoSelector});
+    const [savedSearches] = useOnyx(ONYXKEYS.SAVED_SEARCHES);
     const hasPaidGroupPolicy = policyInfo?.hasPaidGroupPolicy ?? false;
 
     const tabs: TabSelectorBaseItem[] = useMemo(() => {
@@ -36,15 +37,22 @@ function StaticTabSelector({queryJSON}: {queryJSON: SearchQueryJSON}) {
             {key: expensesSearch.key, icon: expensifyIcons.Receipt, title: translate(expensesSearch.translationPath)},
             {key: chatsSearch.key, icon: expensifyIcons.ChatBubbles, title: translate(chatsSearch.translationPath)},
         ];
-
         if (hasPaidGroupPolicy) {
             result.push({key: submitSearch.key, icon: expensifyIcons.Send, title: translate(submitSearch.translationPath)});
         }
-
         return result;
     }, [expensifyIcons, translate, hasPaidGroupPolicy]);
 
-    const activeKey = useMemo(() => getActiveKey(queryJSON.similarSearchHash, hasPaidGroupPolicy), [queryJSON.similarSearchHash, hasPaidGroupPolicy]);
+    const activeKey = useMemo(() => {
+        // If current query matches a saved search, no built-in tab should be highlighted
+        if (savedSearches) {
+            const isSavedSearchActive = Object.keys(savedSearches).some((key) => Number(key) === queryJSON.hash);
+            if (isSavedSearchActive) {
+                return '';
+            }
+        }
+        return getActiveKey(queryJSON.similarSearchHash, hasPaidGroupPolicy);
+    }, [queryJSON.hash, queryJSON.similarSearchHash, hasPaidGroupPolicy, savedSearches]);
 
     return (
         <SearchPageTabSelectorContent

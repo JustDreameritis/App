@@ -1,9 +1,10 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import HeaderWithBackButton from '@components/HeaderWithBackButton';
 import ImportSpreadsheetColumns from '@components/ImportSpreadsheetColumns';
 import ImportSpreadsheetConfirmModal from '@components/ImportSpreadsheetConfirmModal';
 import ScreenWrapper from '@components/ScreenWrapper';
 import useCloseImportPage from '@hooks/useCloseImportPage';
+import useConfirmModal from '@hooks/useConfirmModal';
 import useLocalize from '@hooks/useLocalize';
 import useOnyx from '@hooks/useOnyx';
 import {importMultiLevelTags} from '@libs/actions/Policy/Tag';
@@ -11,6 +12,7 @@ import {generateColumnNames} from '@libs/importSpreadsheetUtils';
 import Navigation from '@libs/Navigation/Navigation';
 import type {PlatformStackScreenProps} from '@libs/Navigation/PlatformStackNavigation/types';
 import type {SettingsNavigatorParamList} from '@libs/Navigation/types';
+import {getTagLists} from '@libs/PolicyUtils';
 import NotFoundPage from '@pages/ErrorPage/NotFoundPage';
 import CONST from '@src/CONST';
 import ONYXKEYS from '@src/ONYXKEYS';
@@ -26,12 +28,26 @@ function ImportedMultiLevelTagsPage({route}: ImportedMultiLevelTagsPageProps) {
     const [isImportingTags, setIsImportingTags] = useState(false);
     const policyID = route.params.policyID;
     const columnNames = generateColumnNames(spreadsheet?.data?.length ?? 0);
+    const [policyTags] = useOnyx(`${ONYXKEYS.COLLECTION.POLICY_TAGS}${policyID}`);
+    const policyTagLists = useMemo(() => getTagLists(policyTags), [policyTags]);
+    const {showConfirmModal} = useConfirmModal();
 
     const {setIsClosing} = useCloseImportPage();
     const importTags = useCallback(() => {
+        // Block import if any existing tag list has requiresTag — multi-level import replaces entire structure
+        const hasRequiredTagList = policyTagLists.some((tagList) => tagList.required);
+        if (hasRequiredTagList) {
+            showConfirmModal({
+                title: translate('workspace.tags.cannotDeleteOrDisableAllTags.title'),
+                prompt: translate('workspace.tags.cannotDeleteOrDisableAllTags.description'),
+                confirmText: translate('common.buttonConfirm'),
+                shouldShowCancelButton: false,
+            });
+            return;
+        }
         setIsImportingTags(true);
         importMultiLevelTags(policyID, spreadsheet);
-    }, [spreadsheet, policyID]);
+    }, [spreadsheet, policyID, policyTagLists, showConfirmModal, translate]);
 
     if (!spreadsheet && isLoadingOnyxValue(spreadsheetMetadata)) {
         return;

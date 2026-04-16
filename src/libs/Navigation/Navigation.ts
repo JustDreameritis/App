@@ -849,16 +849,18 @@ function removeScreenByKey(key: string) {
 function removeReportScreen(reportIDSet: Set<string>) {
     isNavigationReady().then(() => {
         navigationRef.current?.dispatch((state) => {
+            const focusedRouteKey = state.routes[state.index]?.key;
             const routes = state?.routes.filter((route) => {
                 if (route.name === SCREENS.REPORT && route.params && 'reportID' in route.params) {
                     return !reportIDSet.has(route.params?.reportID as string);
                 }
                 return true;
             });
+            const newIndex = routes.findIndex((route) => route.key === focusedRouteKey);
             return CommonActions.reset({
                 ...state,
                 routes,
-                index: routes.length < state.routes.length ? state.index - 1 : state.index,
+                index: newIndex >= 0 ? newIndex : Math.max(0, routes.length - 1),
             });
         });
     });
